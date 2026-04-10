@@ -131,6 +131,13 @@ input {
 .retro-input--race {
   font-size: clamp(1.2rem, 2.4vw, 1.8rem);
   letter-spacing: 0.08em;
+  line-height: 1.35;
+  padding-top: 0.82rem;
+  padding-bottom: 0.82rem;
+}
+
+.retro-input--race::placeholder {
+  letter-spacing: 0.03em;
 }
 
 .retro-input--error {

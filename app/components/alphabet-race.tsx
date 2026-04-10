@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -42,21 +41,7 @@ export function AlphabetRace() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [phase, setPhase] = useState<RacePhase>("idle");
   const [hasMistake, setHasMistake] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(
-    "Enter your username to start.",
-  );
-  const [submissionMessage, setSubmissionMessage] = useState("");
-  const [runtimeMessage, setRuntimeMessage] = useState(
-    "Connecting to the live scoreboard...",
-  );
   const [realtimeEnabled, setRealtimeEnabled] = useState(false);
-  const [storageMode, setStorageMode] = useState<LeaderboardResponse["storageMode"]>(
-    "memory",
-  );
-  const [lastResult, setLastResult] = useState<{
-    durationMs: number;
-    improved: boolean;
-  } | null>(null);
 
   const startedAtRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -83,20 +68,10 @@ export function AlphabetRace() {
 
         setLeaderboard(payload.leaderboard.slice(0, LEADERBOARD_LIMIT));
         setRealtimeEnabled(payload.realtimeEnabled);
-        setStorageMode(payload.storageMode);
-        setRuntimeMessage(
-          payload.realtimeEnabled
-            ? "Live updates enabled."
-            : "Realtime is offline.",
-        );
-      } catch (error) {
+      } catch {
         if (cancelled) {
           return;
         }
-
-        setRuntimeMessage(
-          error instanceof Error ? error.message : "Unable to load highscores.",
-        );
       }
     }
 
@@ -134,30 +109,13 @@ export function AlphabetRace() {
             const message = JSON.parse(event.data) as LeaderboardEvent;
 
             setLeaderboard(message.leaderboard.slice(0, LEADERBOARD_LIMIT));
-            setRuntimeMessage(
-              message.type === "leaderboard.reset"
-                ? "Scoreboard reset."
-                : `Fresh time posted by ${message.entry.username}.`,
-            );
           } catch {
-            setRuntimeMessage("Received an unreadable realtime event.");
+            // Ignore malformed realtime payloads.
           }
         };
-
-        socket.onclose = () => {
-          if (!cancelled) {
-            setRuntimeMessage(
-              "Realtime disconnected. Refresh to reconnect.",
-            );
-          }
-        };
-      } catch (error) {
+      } catch {
         if (!cancelled) {
-          setRuntimeMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to establish realtime connection.",
-          );
+          // Realtime is optional; keep UI working without it.
         }
       }
     }
@@ -203,7 +161,6 @@ export function AlphabetRace() {
     const cleanUsername = normalizeUsername(username);
 
     if (!isValidUsername(cleanUsername)) {
-      setStatusMessage("Handles need 2 to 24 visible characters.");
       return;
     }
 
@@ -213,9 +170,6 @@ export function AlphabetRace() {
     setHasMistake(false);
     setElapsedMs(0);
     setPhase("racing");
-    setStatusMessage("Type the alphabet.");
-    setSubmissionMessage("");
-    setLastResult(null);
     startedAtRef.current = null;
 
     window.requestAnimationFrame(() => {
@@ -226,7 +180,6 @@ export function AlphabetRace() {
   async function finishRace(durationMs: number) {
     setPhase("finished");
     setElapsedMs(durationMs);
-    setStatusMessage("Saving your time...");
 
     try {
       const response = await fetch("/api/race/complete", {
@@ -250,21 +203,8 @@ export function AlphabetRace() {
       }
 
       setLeaderboard(payload.leaderboard.slice(0, LEADERBOARD_LIMIT));
-      setStorageMode(payload.storageMode);
-      setLastResult({ durationMs, improved: payload.improved });
-      setSubmissionMessage(
-        payload.improved
-          ? "New personal best."
-          : "Run saved. Best time unchanged.",
-      );
-      setStatusMessage("Done. You can race again.");
-    } catch (error) {
-      setSubmissionMessage(
-        error instanceof Error ? error.message : "Unable to submit race.",
-      );
-      setStatusMessage(
-        "Finished locally, but score could not be saved.",
-      );
+    } catch {
+      // Keep UX uninterrupted even if persistence fails.
     }
   }
 
@@ -286,15 +226,8 @@ export function AlphabetRace() {
     setHasMistake(!correctPrefix);
 
     if (!correctPrefix) {
-      setStatusMessage("Wrong letter. Backspace and continue.");
       return;
     }
-
-    setStatusMessage(
-      sanitized.length === SWEDISH_ALPHABET.length
-        ? "Last letter. Sending..."
-        : "Keep going.",
-    );
 
     if (sanitized === SWEDISH_ALPHABET && startedAtRef.current !== null) {
       const durationMs = performance.now() - startedAtRef.current;
@@ -302,18 +235,31 @@ export function AlphabetRace() {
     }
   }
 
-  function resetRace() {
+  function backToStart() {
     setRaceInput("");
     setHasMistake(false);
     setElapsedMs(0);
     setPhase("idle");
-    setSubmissionMessage("");
-    setLastResult(null);
-    setStatusMessage("Enter your username to start.");
     startedAtRef.current = null;
 
     window.requestAnimationFrame(() => {
       usernameInputRef.current?.focus();
+    });
+  }
+
+  function startNewAttempt() {
+    if (!committedUsername) {
+      return;
+    }
+
+    setRaceInput("");
+    setHasMistake(false);
+    setElapsedMs(0);
+    setPhase("racing");
+    startedAtRef.current = null;
+
+    window.requestAnimationFrame(() => {
+      raceInputRef.current?.focus();
     });
   }
 
@@ -376,7 +322,7 @@ export function AlphabetRace() {
                       }
                     }}
                     className="retro-input"
-                    placeholder="erik"
+                    placeholder="Name"
                     maxLength={24}
                     autoComplete="nickname"
                   />
@@ -386,9 +332,6 @@ export function AlphabetRace() {
                   <button type="button" className="pixel-button" onClick={startRace}>
                     Start
                   </button>
-                  <Link href="/admin" className="text-sm uppercase tracking-[0.22em] text-[var(--color-copy-soft)] transition hover:text-[var(--color-copy)]">
-                    Admin
-                  </Link>
                 </div>
               </div>
             ) : (
@@ -398,13 +341,6 @@ export function AlphabetRace() {
                     <p className="field-label">racing as</p>
                     <p className="text-lg text-[var(--color-copy)]">{committedUsername}</p>
                   </div>
-                  <button
-                    type="button"
-                    className="pixel-button pixel-button--ghost"
-                    onClick={resetRace}
-                  >
-                    Reset
-                  </button>
                 </div>
 
                 <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
@@ -456,45 +392,31 @@ export function AlphabetRace() {
                     />
                   </label>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
                     <div className="info-chip">
                       <span className="info-chip__label">progress</span>
                       <strong>{progressCount} / {SWEDISH_ALPHABET.length}</strong>
                     </div>
-                    <div className="info-chip">
-                      <span className="info-chip__label">storage</span>
-                      <strong>{storageMode === "azure" ? "Azure" : "Memory"}</strong>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        className="pixel-button pixel-button--ghost"
+                        onClick={backToStart}
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        className="pixel-button"
+                        onClick={startNewAttempt}
+                      >
+                        New attempt
+                      </button>
                     </div>
                   </div>
                 </div>
               </>
             )}
-
-            <div className="grid gap-3 lg:grid-cols-[1fr_0.8fr]">
-              <div className="panel-subtle">
-                <p className="field-label">status</p>
-                <p className="text-lg text-[var(--color-copy)]">{statusMessage}</p>
-                <p className="mt-2 text-sm text-[var(--color-copy-soft)]">{runtimeMessage}</p>
-              </div>
-
-              {phase !== "idle" ? (
-                <div className="panel-subtle">
-                  <p className="field-label">result</p>
-                  {lastResult ? (
-                    <div className="space-y-2 text-lg text-[var(--color-copy)]">
-                      <p>{formatDuration(lastResult.durationMs)}</p>
-                      <p className="text-[var(--color-copy-soft)]">
-                        {lastResult.improved
-                          ? "Personal best improved."
-                          : "Best time unchanged."}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-lg text-[var(--color-copy-soft)]">{submissionMessage || "No run completed yet."}</p>
-                  )}
-                </div>
-              ) : null}
-            </div>
           </div>
         </div>
 
