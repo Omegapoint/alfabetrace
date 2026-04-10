@@ -166,6 +166,27 @@ Optional repository variables (defaults exist in workflow):
 
 The app deployment workflow runs on push to `main`.
 
+### Static Web Apps runtime app settings (required)
+
+For hybrid Next.js, environment variables passed in GitHub Actions are used during build, but SSR/API runtime settings are read from the Static Web Apps resource.
+
+Set these in Azure Portal under Static Web App -> Environment variables (Production), or with Azure CLI:
+
+```bash
+az staticwebapp appsettings set \
+	--name <static-web-app-name> \
+	--resource-group alfabetsrace-prod-rg \
+	--setting-names \
+	AZURE_COSMOS_CONNECTION_STRING="<cosmos-connection-string>" \
+	AZURE_COSMOS_DATABASE_NAME="alfabetsrace" \
+	AZURE_COSMOS_HIGHSCORES_CONTAINER="highscores" \
+	AZURE_WEB_PUBSUB_CONNECTION_STRING="<webpubsub-connection-string>" \
+	NEXT_PUBLIC_WEB_PUBSUB_HUB_NAME="highscores" \
+	ADMIN_SECRET="<admin-secret>"
+```
+
+After updating app settings, trigger a new deployment or restart the app so runtime picks up the new values.
+
 ### One-time secret wiring after infra deployment
 
 After infrastructure deployment, get runtime secrets with Azure CLI and add them to GitHub repository secrets.

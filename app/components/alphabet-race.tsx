@@ -32,6 +32,50 @@ function formatDuration(durationMs: number) {
   return `${numberFormatter.format(durationMs / 1000)} s`;
 }
 
+function isLeaderboardEvent(value: unknown): value is LeaderboardEvent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const event = value as Partial<LeaderboardEvent>;
+  return (
+    (event.type === "leaderboard.updated" || event.type === "leaderboard.reset") &&
+    Array.isArray(event.leaderboard)
+  );
+}
+
+function parseRealtimeMessage(data: unknown) {
+  if (typeof data !== "string") {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(data) as unknown;
+
+    if (isLeaderboardEvent(parsed)) {
+      return parsed;
+    }
+
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "type" in parsed &&
+      (parsed as { type?: unknown }).type === "message" &&
+      "data" in parsed
+    ) {
+      const wrapped = (parsed as { data?: unknown }).data;
+
+      if (isLeaderboardEvent(wrapped)) {
+        return wrapped;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function AlphabetRace() {
   const [username, setUsername] = useState("");
   const [committedUsername, setCommittedUsername] = useState("");
@@ -83,6 +127,17 @@ export function AlphabetRace() {
 
   useEffect(() => {
     let cancelled = false;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleReconnect = () => {
+      if (cancelled) {
+        return;
+      }
+
+      reconnectTimeout = setTimeout(() => {
+        void connectRealtime();
+      }, 1200);
+    };
 
     async function connectRealtime() {
       try {
@@ -104,17 +159,24 @@ export function AlphabetRace() {
         socketRef.current = socket;
 
         socket.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data) as LeaderboardEvent;
+          const message = parseRealtimeMessage(event.data);
 
+          if (message) {
             setLeaderboard(message.leaderboard.slice(0, LEADERBOARD_LIMIT));
-          } catch {
-            // Ignore malformed realtime payloads.
           }
+        };
+
+        socket.onclose = () => {
+          if (socketRef.current === socket) {
+            socketRef.current = null;
+          }
+
+          scheduleReconnect();
         };
       } catch {
         if (!cancelled) {
           // Realtime is optional; keep UI working without it.
+          scheduleReconnect();
         }
       }
     }
@@ -123,6 +185,9 @@ export function AlphabetRace() {
 
     return () => {
       cancelled = true;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       socketRef.current?.close();
       socketRef.current = null;
     };
