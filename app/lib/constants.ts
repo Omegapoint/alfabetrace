@@ -1,6 +1,6 @@
 export const APP_NAME = "Alfabetsrace";
 export const APP_DESCRIPTION =
-  "Race through the Swedish alphabet, chase your best time, and watch the live highscore board update in real time.";
+  "Skriv dig genom det svenska alfabetet, jaga din bästa tid och se topplistan uppdateras live i realtid.";
 
 export const SWEDISH_ALPHABET = "abcdefghijklmnopqrstuvwxyzåäö";
 export const LEADERBOARD_LIMIT = 10;

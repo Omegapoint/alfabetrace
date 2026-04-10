@@ -276,7 +276,7 @@ export function AlphabetRace() {
     return count;
   })();
 
-  const nextLetter = SWEDISH_ALPHABET[progressCount]?.toUpperCase() ?? "DONE";
+  const nextLetter = SWEDISH_ALPHABET[progressCount]?.toUpperCase() ?? "KLAR";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -286,7 +286,7 @@ export function AlphabetRace() {
             <div className="max-w-2xl space-y-4">
               <Image
                 src="/wordmark.svg"
-                alt={`${APP_NAME} wordmark`}
+                alt={`${APP_NAME} ordmärke`}
                 width={320}
                 height={142}
                 priority
@@ -299,16 +299,16 @@ export function AlphabetRace() {
 
             <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_190px] md:items-stretch">
               <div className="retro-meter min-h-[96px]">
-                <span className="retro-meter__label">timer</span>
+                <span className="retro-meter__label">tid</span>
                 <strong className="retro-meter__value">{formatDuration(elapsedMs)}</strong>
                 <span className="retro-meter__hint">
-                  {phase === "racing" ? "Running" : phase === "finished" ? "Done" : "Ready"}
+                  {phase === "racing" ? "Pågår" : phase === "finished" ? "Klar" : "Redo"}
                 </span>
               </div>
 
               {phase === "idle" ? (
                 <div className="panel-subtle min-h-[96px] md:col-span-2">
-                  <span className="field-label">username</span>
+                  <span className="field-label">namn</span>
                   <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
                     <input
                       ref={usernameInputRef}
@@ -321,7 +321,7 @@ export function AlphabetRace() {
                         }
                       }}
                       className="retro-input"
-                      placeholder="Name"
+                      placeholder="Namn"
                       maxLength={24}
                       autoComplete="nickname"
                     />
@@ -336,7 +336,7 @@ export function AlphabetRace() {
                 </div>
               ) : (
                 <div className="retro-meter min-h-[96px]">
-                  <span className="retro-meter__label">racing as</span>
+                  <span className="retro-meter__label">kör som</span>
                   <strong className="retro-meter__value truncate text-[var(--color-copy)]">
                     {committedUsername}
                   </strong>
@@ -352,26 +352,38 @@ export function AlphabetRace() {
                     className="pixel-button pixel-button--ghost w-full justify-center"
                     onClick={backToStart}
                   >
-                    Back
+                    Tillbaka
                   </button>
                   <button
                     type="button"
                     className="pixel-button w-full justify-center"
                     onClick={startNewAttempt}
                   >
-                    New attempt
+                    Nytt försök
                   </button>
                 </div>
               )}
             </div>
 
-            {phase === "idle" ? null : (
+            {phase === "idle" ? (
+              <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
+                <p className="field-label">så här kör du</p>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-[var(--color-copy)]">
+                  <li>Skriv in alfabetet från A till Ö så snabbt du kan</li>
+                  <li>Bokstäverna måste skrivas i rätt ordning</li>
+                  <li>Använd samma namn för att slå ditt rekord - din bästa tid visas i Topplistan!</li>
+                </ul>
+                <p className="mt-4 text-xs italic leading-5 text-[var(--color-copy-soft)]">
+                  OBS! Efter eventet kommer all speldata att raderas från databasen - men du är välkommen att använda ett smeknamn/fiktivt namn när du spelar
+                </p>
+              </div>
+            ) : (
               <>
                 <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
                   <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
                     <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
-                    <span>{phase === "racing" ? "active" : "finished"}</span>
-                    <span>next: {nextLetter}</span>
+                    <span>{phase === "racing" ? "aktiv" : "klar"}</span>
+                    <span>nästa: {nextLetter}</span>
                   </div>
 
                   <div className="alphabet-strip" aria-hidden="true">
@@ -397,7 +409,7 @@ export function AlphabetRace() {
                   </div>
 
                   <label className="mt-4 block space-y-2">
-                    <span className="field-label">type the swedish alphabet</span>
+                    <span className="field-label">skriv det svenska alfabetet</span>
                     <input
                       ref={raceInputRef}
                       value={raceInput}
@@ -424,9 +436,9 @@ export function AlphabetRace() {
         <aside className="panel p-4 sm:p-5">
           <div className="flex items-center justify-between gap-4 border-b border-[rgba(28,41,64,0.12)] pb-4">
             <div>
-              <p className="eyebrow">highscores</p>
+              <p className="eyebrow">topplista</p>
               <h2 className="font-display text-lg uppercase text-[var(--color-copy)] sm:text-xl">
-                Best times
+                Bästa tider
               </h2>
             </div>
             <span className={`status-lamp ${realtimeEnabled ? "status-lamp--hot" : ""}`} />
@@ -447,8 +459,8 @@ export function AlphabetRace() {
               ))
             ) : (
               <div className="panel-subtle">
-                <p className="text-lg text-[var(--color-copy)]">No times on the board yet.</p>
-                <p className="mt-2 text-sm text-[var(--color-copy-soft)]">Be the first to set a time.</p>
+                <p className="text-lg text-[var(--color-copy)]">Inga tider på tavlan än.</p>
+                <p className="mt-2 text-sm text-[var(--color-copy-soft)]">Bli först med att sätta en tid.</p>
               </div>
             )}
           </div>
