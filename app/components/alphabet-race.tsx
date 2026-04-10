@@ -283,66 +283,90 @@ export function AlphabetRace() {
       <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="panel panel-glow relative overflow-hidden p-5 sm:p-6">
           <div className="relative flex flex-col gap-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="max-w-2xl space-y-4">
-                <Image
-                  src="/wordmark.svg"
-                  alt={`${APP_NAME} wordmark`}
-                  width={320}
-                  height={142}
-                  priority
-                  className="h-auto w-[200px] sm:w-[280px]"
-                />
-                <p className="max-w-xl text-base leading-6 text-[var(--color-copy)] sm:text-lg">
-                  {APP_DESCRIPTION}
-                </p>
-              </div>
+            <div className="max-w-2xl space-y-4">
+              <Image
+                src="/wordmark.svg"
+                alt={`${APP_NAME} wordmark`}
+                width={320}
+                height={142}
+                priority
+                className="h-auto w-[200px] sm:w-[280px]"
+              />
+              <p className="max-w-xl text-base leading-6 text-[var(--color-copy)] sm:text-lg">
+                {APP_DESCRIPTION}
+              </p>
+            </div>
 
-              <div className="retro-meter min-w-[180px]">
+            <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_190px] md:items-stretch">
+              <div className="retro-meter min-h-[96px]">
                 <span className="retro-meter__label">timer</span>
                 <strong className="retro-meter__value">{formatDuration(elapsedMs)}</strong>
                 <span className="retro-meter__hint">
                   {phase === "racing" ? "Running" : phase === "finished" ? "Done" : "Ready"}
                 </span>
               </div>
-            </div>
 
-            {phase === "idle" ? (
-              <div className="grid gap-4 md:grid-cols-[minmax(0,240px)_1fr]">
-                <label className="space-y-2">
+              {phase === "idle" ? (
+                <div className="panel-subtle min-h-[96px] md:col-span-2">
                   <span className="field-label">username</span>
-                  <input
-                    ref={usernameInputRef}
-                    value={username}
-                    onChange={(event) => setUsername(normalizeUsername(event.target.value))}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        startRace();
-                      }
-                    }}
-                    className="retro-input"
-                    placeholder="Name"
-                    maxLength={24}
-                    autoComplete="nickname"
-                  />
-                </label>
-
-                <div className="flex flex-wrap items-end gap-3">
-                  <button type="button" className="pixel-button" onClick={startRace}>
-                    Start
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-end gap-3">
-                  <div className="min-w-[180px] flex-1">
-                    <p className="field-label">racing as</p>
-                    <p className="text-lg text-[var(--color-copy)]">{committedUsername}</p>
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
+                    <input
+                      ref={usernameInputRef}
+                      value={username}
+                      onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          startRace();
+                        }
+                      }}
+                      className="retro-input"
+                      placeholder="Name"
+                      maxLength={24}
+                      autoComplete="nickname"
+                    />
+                    <button
+                      type="button"
+                      className="pixel-button pixel-button--flat h-[50px] w-full justify-center"
+                      onClick={startRace}
+                    >
+                      Start
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div className="retro-meter min-h-[96px]">
+                  <span className="retro-meter__label">racing as</span>
+                  <strong className="retro-meter__value truncate text-[var(--color-copy)]">
+                    {committedUsername}
+                  </strong>
+                </div>
+              )}
 
+              {phase === "idle" ? (
+                null
+              ) : (
+                <div className="flex h-full min-h-[96px] flex-col justify-center gap-2">
+                  <button
+                    type="button"
+                    className="pixel-button pixel-button--ghost w-full justify-center"
+                    onClick={backToStart}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="pixel-button w-full justify-center"
+                    onClick={startNewAttempt}
+                  >
+                    New attempt
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {phase === "idle" ? null : (
+              <>
                 <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
                   <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
                     <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
@@ -391,29 +415,6 @@ export function AlphabetRace() {
                       spellCheck={false}
                     />
                   </label>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <div className="info-chip">
-                      <span className="info-chip__label">progress</span>
-                      <strong>{progressCount} / {SWEDISH_ALPHABET.length}</strong>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        className="pixel-button pixel-button--ghost"
-                        onClick={backToStart}
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="button"
-                        className="pixel-button"
-                        onClick={startNewAttempt}
-                      >
-                        New attempt
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </>
             )}
