@@ -336,7 +336,6 @@ export function AlphabetRace() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
       <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="panel panel-glow relative overflow-hidden p-5 sm:p-6">
-          <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#ff7a00_0%,#ffe600_35%,#5affb1_65%,#2ea8ff_100%)]" />
           <div className="relative flex flex-col gap-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl space-y-4">
@@ -370,6 +369,12 @@ export function AlphabetRace() {
                     ref={usernameInputRef}
                     value={username}
                     onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        startRace();
+                      }
+                    }}
                     className="retro-input"
                     placeholder="erik"
                     maxLength={24}
@@ -381,7 +386,7 @@ export function AlphabetRace() {
                   <button type="button" className="pixel-button" onClick={startRace}>
                     Start
                   </button>
-                  <Link href="/admin" className="text-sm uppercase tracking-[0.22em] text-[var(--color-copy-soft)] transition hover:text-white">
+                  <Link href="/admin" className="text-sm uppercase tracking-[0.22em] text-[var(--color-copy-soft)] transition hover:text-[var(--color-copy)]">
                     Admin
                   </Link>
                 </div>
@@ -391,7 +396,7 @@ export function AlphabetRace() {
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[180px] flex-1">
                     <p className="field-label">racing as</p>
-                    <p className="text-lg text-white">{committedUsername}</p>
+                    <p className="text-lg text-[var(--color-copy)]">{committedUsername}</p>
                   </div>
                   <button
                     type="button"
@@ -402,7 +407,7 @@ export function AlphabetRace() {
                   </button>
                 </div>
 
-                <div className="rounded-[22px] border border-white/10 bg-black/35 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
                   <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
                     <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
                     <span>{phase === "racing" ? "active" : "finished"}</span>
@@ -468,7 +473,7 @@ export function AlphabetRace() {
             <div className="grid gap-3 lg:grid-cols-[1fr_0.8fr]">
               <div className="panel-subtle">
                 <p className="field-label">status</p>
-                <p className="text-lg text-white">{statusMessage}</p>
+                <p className="text-lg text-[var(--color-copy)]">{statusMessage}</p>
                 <p className="mt-2 text-sm text-[var(--color-copy-soft)]">{runtimeMessage}</p>
               </div>
 
@@ -476,7 +481,7 @@ export function AlphabetRace() {
                 <div className="panel-subtle">
                   <p className="field-label">result</p>
                   {lastResult ? (
-                    <div className="space-y-2 text-lg text-white">
+                    <div className="space-y-2 text-lg text-[var(--color-copy)]">
                       <p>{formatDuration(lastResult.durationMs)}</p>
                       <p className="text-[var(--color-copy-soft)]">
                         {lastResult.improved
@@ -494,10 +499,10 @@ export function AlphabetRace() {
         </div>
 
         <aside className="panel p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="flex items-center justify-between gap-4 border-b border-[rgba(28,41,64,0.12)] pb-4">
             <div>
               <p className="eyebrow">highscores</p>
-              <h2 className="font-display text-lg uppercase text-white sm:text-xl">
+              <h2 className="font-display text-lg uppercase text-[var(--color-copy)] sm:text-xl">
                 Best times
               </h2>
             </div>
@@ -510,7 +515,7 @@ export function AlphabetRace() {
                 <div key={entry.id} className="leaderboard-row">
                   <span className="leaderboard-row__rank">#{index + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg text-white">{entry.username}</p>
+                    <p className="truncate text-lg text-[var(--color-copy)]">{entry.username}</p>
                   </div>
                   <strong className="text-base text-[var(--color-accent)]">
                     {formatDuration(entry.bestTimeMs)}
@@ -519,7 +524,7 @@ export function AlphabetRace() {
               ))
             ) : (
               <div className="panel-subtle">
-                <p className="text-lg text-white">No times on the board yet.</p>
+                <p className="text-lg text-[var(--color-copy)]">No times on the board yet.</p>
                 <p className="mt-2 text-sm text-[var(--color-copy-soft)]">Be the first to set a time.</p>
               </div>
             )}
