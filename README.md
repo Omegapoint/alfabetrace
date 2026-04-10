@@ -196,7 +196,7 @@ Get Cosmos DB connection string:
 ```bash
 az cosmosdb keys list \
 	--resource-group alfabetsrace-prod-rg \
-	--name <cosmos-account-name> \
+	--name alfrace-prod-cosmos-ljwqk3vakfmme \
 	--type connection-strings \
 	--query "connectionStrings[0].connectionString" \
 	-o tsv
@@ -207,7 +207,7 @@ Get Web PubSub connection string:
 ```bash
 az webpubsub key show \
 	--resource-group alfabetsrace-prod-rg \
-	--name <webpubsub-name> \
+	--name alfrace-prod-wps-ljwqk3vakfmme \
 	--query primaryConnectionString \
 	-o tsv
 ```

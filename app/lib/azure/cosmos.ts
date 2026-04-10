@@ -71,14 +71,12 @@ export async function listHighscores(limit = LEADERBOARD_LIMIT) {
   const container = await getHighscoresContainer();
   const { resources } = await container.items
     .query<HighscoreEntry>({
-      query:
-        "SELECT * FROM c ORDER BY c.bestTimeMs ASC, c.updatedAt ASC OFFSET 0 LIMIT @limit",
-      parameters: [{ name: "@limit", value: limit }],
+      query: "SELECT * FROM c",
     })
     .fetchAll();
 
   return {
-    leaderboard: resources,
+    leaderboard: sortLeaderboard(resources).slice(0, limit),
     storageMode: getStorageMode(),
   };
 }
