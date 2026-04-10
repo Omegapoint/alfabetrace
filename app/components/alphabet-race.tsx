@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import {
-  APP_DESCRIPTION,
   APP_NAME,
   LEADERBOARD_LIMIT,
   SWEDISH_ALPHABET,
@@ -292,60 +291,117 @@ export function AlphabetRace() {
                 priority
                 className="h-auto w-[200px] sm:w-[280px]"
               />
-              <p className="max-w-xl text-base leading-6 text-[var(--color-copy)] sm:text-lg">
-                {APP_DESCRIPTION}
-              </p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_190px] md:items-stretch">
-              <div className="retro-meter min-h-[96px]">
-                <span className="retro-meter__label">tid</span>
-                <strong className="retro-meter__value">{formatDuration(elapsedMs)}</strong>
-                <span className="retro-meter__hint">
-                  {phase === "racing" ? "Pågår" : phase === "finished" ? "Klar" : "Redo"}
-                </span>
+            {phase === "idle" ? (
+              <div className="min-h-[220px] rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
+                <p className="field-label">så här kör du</p>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-[var(--color-copy)]">
+                  <li>Skriv in alfabetet från A till Ö så snabbt du kan</li>
+                  <li>Bokstäverna måste skrivas i rätt ordning</li>
+                  <li>Använd samma namn för att slå ditt rekord - din bästa tid visas i Topplistan!</li>
+                </ul>
+                <p className="mt-4 text-sm italic leading-5 text-[var(--color-copy-soft)]">
+                  OBS! Efter eventet kommer all speldata att raderas från databasen - men du är välkommen att använda ett smeknamn/fiktivt namn när du spelar
+                </p>
               </div>
-
-              {phase === "idle" ? (
-                <div className="panel-subtle min-h-[96px] md:col-span-2">
-                  <span className="field-label">namn</span>
-                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
-                    <input
-                      ref={usernameInputRef}
-                      value={username}
-                      onChange={(event) => setUsername(normalizeUsername(event.target.value))}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          startRace();
-                        }
-                      }}
-                      className="retro-input"
-                      placeholder="Namn"
-                      maxLength={24}
-                      autoComplete="nickname"
-                    />
-                    <button
-                      type="button"
-                      className="pixel-button pixel-button--flat h-[50px] w-full justify-center"
-                      onClick={startRace}
-                    >
-                      Start
-                    </button>
-                  </div>
+            ) : (
+              <div className="min-h-[220px] rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
+                <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
+                  <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
+                  <span>{phase === "racing" ? "aktiv" : "klar"}</span>
+                  <span>nästa: {nextLetter}</span>
                 </div>
-              ) : (
+
+                <div className="alphabet-strip" aria-hidden="true">
+                  {[...SWEDISH_ALPHABET].map((character, index) => {
+                    const isLocked = index < progressCount;
+                    const isCurrent = index === progressCount;
+
+                    return (
+                      <span
+                        key={character}
+                        className={[
+                          "alphabet-strip__character",
+                          isLocked ? "alphabet-strip__character--locked" : "",
+                          isCurrent ? "alphabet-strip__character--current" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {character.toUpperCase()}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                <label className="mt-4 block space-y-2">
+                  <span className="field-label">skriv det svenska alfabetet</span>
+                  <input
+                    ref={raceInputRef}
+                    value={raceInput}
+                    onChange={(event) => {
+                      void handleRaceInput(event.target.value);
+                    }}
+                    onPaste={(event) => {
+                      event.preventDefault();
+                    }}
+                    className={`retro-input retro-input--race ${hasMistake ? "retro-input--error" : ""}`}
+                    placeholder={SWEDISH_ALPHABET.toUpperCase()}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </label>
+              </div>
+            )}
+
+            {phase === "idle" ? (
+              <div className="panel-subtle min-h-[96px]">
+                <span className="field-label">namn</span>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
+                  <input
+                    ref={usernameInputRef}
+                    value={username}
+                    onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        startRace();
+                      }
+                    }}
+                    className="retro-input"
+                    placeholder="Namn"
+                    maxLength={24}
+                    autoComplete="nickname"
+                  />
+                  <button
+                    type="button"
+                    className="pixel-button pixel-button--flat h-[50px] w-full justify-center"
+                    onClick={startRace}
+                  >
+                    Start
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_190px] md:items-stretch">
+                <div className="retro-meter min-h-[96px]">
+                  <span className="retro-meter__label">tid</span>
+                  <strong className="retro-meter__value">{formatDuration(elapsedMs)}</strong>
+                  <span className="retro-meter__hint">
+                    {phase === "racing" ? "Pågår" : phase === "finished" ? "Klar" : "Redo"}
+                  </span>
+                </div>
+
                 <div className="retro-meter min-h-[96px]">
                   <span className="retro-meter__label">kör som</span>
                   <strong className="retro-meter__value truncate text-[var(--color-copy)]">
                     {committedUsername}
                   </strong>
                 </div>
-              )}
 
-              {phase === "idle" ? (
-                null
-              ) : (
                 <div className="flex h-full min-h-[96px] flex-col justify-center gap-2">
                   <button
                     type="button"
@@ -362,74 +418,9 @@ export function AlphabetRace() {
                     Nytt försök
                   </button>
                 </div>
-              )}
-            </div>
-
-            {phase === "idle" ? (
-              <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
-                <p className="field-label">så här kör du</p>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-[var(--color-copy)]">
-                  <li>Skriv in alfabetet från A till Ö så snabbt du kan</li>
-                  <li>Bokstäverna måste skrivas i rätt ordning</li>
-                  <li>Använd samma namn för att slå ditt rekord - din bästa tid visas i Topplistan!</li>
-                </ul>
-                <p className="mt-4 text-xs italic leading-5 text-[var(--color-copy-soft)]">
-                  OBS! Efter eventet kommer all speldata att raderas från databasen - men du är välkommen att använda ett smeknamn/fiktivt namn när du spelar
-                </p>
               </div>
-            ) : (
-              <>
-                <div className="rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
-                  <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
-                    <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
-                    <span>{phase === "racing" ? "aktiv" : "klar"}</span>
-                    <span>nästa: {nextLetter}</span>
-                  </div>
-
-                  <div className="alphabet-strip" aria-hidden="true">
-                    {[...SWEDISH_ALPHABET].map((character, index) => {
-                      const isLocked = index < progressCount;
-                      const isCurrent = index === progressCount;
-
-                      return (
-                        <span
-                          key={character}
-                          className={[
-                            "alphabet-strip__character",
-                            isLocked ? "alphabet-strip__character--locked" : "",
-                            isCurrent ? "alphabet-strip__character--current" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
-                          {character.toUpperCase()}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <label className="mt-4 block space-y-2">
-                    <span className="field-label">skriv det svenska alfabetet</span>
-                    <input
-                      ref={raceInputRef}
-                      value={raceInput}
-                      onChange={(event) => {
-                        void handleRaceInput(event.target.value);
-                      }}
-                      onPaste={(event) => {
-                        event.preventDefault();
-                      }}
-                      className={`retro-input retro-input--race ${hasMistake ? "retro-input--error" : ""}`}
-                      placeholder={SWEDISH_ALPHABET.toUpperCase()}
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </label>
-                </div>
-              </>
             )}
+
           </div>
         </div>
 
