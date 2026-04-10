@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Lager_2" data-name="Lager 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76.08 76.08">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-1, .cls-2 {
+        stroke-width: 0px;
+      }
+
+      .cls-2 {
+        fill: #1d1d1b;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1" data-name="Layer 1">
+    <rect class="cls-1" width="76.08" height="76.08"/>
+    <g>
+      <path class="cls-2" d="M30.38,52.61c9.64,0,16.33-5.9,16.33-14.76s-6.68-14.39-16.33-14.39-16.38,5.75-16.38,14.6,6.74,14.54,16.38,14.54ZM30.38,31.01c6.38,0,7.71,3.93,7.71,7.03,0,6.13-5.17,7.03-7.71,7.03-4.45,0-7.71-2.49-7.71-7.03,0-3.68,1.38-7.03,7.71-7.03Z"/>
+      <ellipse class="cls-2" cx="55.08" cy="46.36" rx="7" ry="6.22"/>
+    </g>
+  </g>
+</svg>
