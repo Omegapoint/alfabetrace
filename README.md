@@ -82,3 +82,137 @@ Manual checks:
 Azure Static Web Apps hybrid Next.js supports App Router and Route Handlers, which is enough for this app. Realtime transport is delegated to Azure Web PubSub, so the app runtime does not need to host raw WebSocket sessions directly.
 
 If Static Web Apps preview constraints become a problem, move the same app to Azure App Service and keep the rest of the architecture unchanged.
+
+## Infrastructure as Code (Bicep)
+
+The repository includes Bicep templates in `infra/` for a low-cost Azure setup:
+
+1. Cosmos DB for NoSQL in serverless mode.
+2. Web PubSub in Free tier (`Free_F1`).
+3. Static Web Apps in Free tier.
+
+### Prerequisites
+
+1. Azure CLI installed and authenticated.
+2. Access to an Azure subscription.
+
+```bash
+az login
+az account set --subscription "<subscription-id-or-name>"
+```
+
+### Deploy from local machine
+
+Create the resource group:
+
+```bash
+az group create --name alfabetsrace-prod-rg --location westeurope --tags "Creation date=2026-04-10" "Keep until=2027-04-10" "Responsible email=erik.rundberg@omegapoint.se"
+```
+
+Validate infrastructure:
+
+```bash
+az deployment group validate \
+	--resource-group alfabetsrace-prod-rg \
+	--template-file infra/main.bicep \
+	--parameters infra/parameters/prod.bicepparam
+```
+
+Deploy infrastructure:
+
+```bash
+az deployment group create \
+	--name infra-prod-$(date +%Y%m%d%H%M%S) \
+	--resource-group alfabetsrace-prod-rg \
+	--template-file infra/main.bicep \
+	--parameters infra/parameters/prod.bicepparam
+```
+
+Read deployment outputs (resource names, hostnames):
+
+```bash
+az deployment group show \
+	--resource-group alfabetsrace-prod-rg \
+	--name <deployment-name> \
+	--query properties.outputs
+```
+
+### GitHub Actions: infrastructure deployment
+
+Workflow: `.github/workflows/infra-deploy.yml`
+
+Required repository secret:
+
+- `AZURE_CREDENTIALS`: Service principal JSON for `azure/login`.
+
+Run from GitHub Actions (workflow is fixed to `prod`).
+
+### GitHub Actions: app deployment
+
+Workflow: `.github/workflows/app-deploy.yml`
+
+Required repository secrets:
+
+- `AZURE_STATIC_WEB_APPS_API_TOKEN`
+- `AZURE_COSMOS_CONNECTION_STRING`
+- `AZURE_WEB_PUBSUB_CONNECTION_STRING`
+- `ADMIN_SECRET`
+
+Optional repository variables (defaults exist in workflow):
+
+- `AZURE_COSMOS_DATABASE_NAME` (default `alfabetsrace`)
+- `AZURE_COSMOS_HIGHSCORES_CONTAINER` (default `highscores`)
+- `NEXT_PUBLIC_WEB_PUBSUB_HUB_NAME` (default `highscores`)
+
+The app deployment workflow runs on push to `main`.
+
+### One-time secret wiring after infra deployment
+
+After infrastructure deployment, get runtime secrets with Azure CLI and add them to GitHub repository secrets.
+
+Get Cosmos DB connection string:
+
+```bash
+az cosmosdb keys list \
+	--resource-group alfabetsrace-prod-rg \
+	--name <cosmos-account-name> \
+	--type connection-strings \
+	--query "connectionStrings[0].connectionString" \
+	-o tsv
+```
+
+Get Web PubSub connection string:
+
+```bash
+az webpubsub key show \
+	--resource-group alfabetsrace-prod-rg \
+	--name <webpubsub-name> \
+	--query primaryConnectionString \
+	-o tsv
+```
+
+Get Static Web Apps deployment token:
+
+```bash
+az staticwebapp secrets list \
+	--resource-group alfabetsrace-prod-rg \
+	--name <static-web-app-name> \
+	--query properties.apiKey \
+	-o tsv
+```
+
+Set these GitHub repository secrets:
+
+1. `AZURE_COSMOS_CONNECTION_STRING`
+2. `AZURE_WEB_PUBSUB_CONNECTION_STRING`
+3. `AZURE_STATIC_WEB_APPS_API_TOKEN`
+
+Also generate and set:
+
+1. `ADMIN_SECRET` with a long random value.
+
+Example generator:
+
+```bash
+openssl rand -hex 32
+```

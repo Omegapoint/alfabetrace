@@ -1,0 +1,45 @@
+name: Deploy App to Azure Static Web Apps
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure required secrets are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]] || (echo "Missing AZURE_STATIC_WEB_APPS_API_TOKEN" && exit 1)
+          [[ -n "${{ secrets.AZURE_COSMOS_CONNECTION_STRING }}" ]] || (echo "Missing AZURE_COSMOS_CONNECTION_STRING" && exit 1)
+          [[ -n "${{ secrets.AZURE_WEB_PUBSUB_CONNECTION_STRING }}" ]] || (echo "Missing AZURE_WEB_PUBSUB_CONNECTION_STRING" && exit 1)
+          [[ -n "${{ secrets.ADMIN_SECRET }}" ]] || (echo "Missing ADMIN_SECRET" && exit 1)
+
+      - name: Build and Deploy Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: /
+          api_location: ''
+          output_location: ''
+        env:
+          AZURE_COSMOS_CONNECTION_STRING: ${{ secrets.AZURE_COSMOS_CONNECTION_STRING }}
+          AZURE_COSMOS_DATABASE_NAME: ${{ vars.AZURE_COSMOS_DATABASE_NAME || 'alfabetsrace' }}
+          AZURE_COSMOS_HIGHSCORES_CONTAINER: ${{ vars.AZURE_COSMOS_HIGHSCORES_CONTAINER || 'highscores' }}
+          AZURE_WEB_PUBSUB_CONNECTION_STRING: ${{ secrets.AZURE_WEB_PUBSUB_CONNECTION_STRING }}
+          NEXT_PUBLIC_WEB_PUBSUB_HUB_NAME: ${{ vars.NEXT_PUBLIC_WEB_PUBSUB_HUB_NAME || 'highscores' }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}

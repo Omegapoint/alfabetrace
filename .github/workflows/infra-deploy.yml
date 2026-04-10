@@ -1,0 +1,86 @@
+name: Deploy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: 'Azure location for resource group creation'
+        required: true
+        default: 'westeurope'
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_RESOURCE_GROUP_PREFIX: alfabetsrace
+  CREATION_DATE_TAG: '2026-04-10'
+  KEEP_UNTIL_TAG: '2027-04-10'
+  RESPONSIBLE_EMAIL_TAG: 'erik.rundberg@omegapoint.se'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve parameters
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          ENVIRONMENT="prod"
+          LOCATION="${{ github.event.inputs.location }}"
+          RESOURCE_GROUP="${AZURE_RESOURCE_GROUP_PREFIX}-${ENVIRONMENT}-rg"
+          PARAMS_FILE="infra/parameters/prod.bicepparam"
+
+          echo "environment=${ENVIRONMENT}" >> "$GITHUB_OUTPUT"
+          echo "location=${LOCATION}" >> "$GITHUB_OUTPUT"
+          echo "resource_group=${RESOURCE_GROUP}" >> "$GITHUB_OUTPUT"
+          echo "params_file=${PARAMS_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure resource group exists
+        shell: bash
+        run: |
+          az group create \
+            --name "${{ steps.vars.outputs.resource_group }}" \
+            --location "${{ steps.vars.outputs.location }}" \
+            --tags "Creation date=${CREATION_DATE_TAG}" "Keep until=${KEEP_UNTIL_TAG}" "Responsible email=${RESPONSIBLE_EMAIL_TAG}"
+
+      - name: Validate Bicep template
+        shell: bash
+        run: |
+          az deployment group validate \
+            --resource-group "${{ steps.vars.outputs.resource_group }}" \
+            --template-file infra/main.bicep \
+            --parameters "${{ steps.vars.outputs.params_file }}"
+
+      - name: Deploy infrastructure
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_NAME="infra-${{ steps.vars.outputs.environment }}-${GITHUB_RUN_NUMBER}"
+
+          OUTPUTS=$(az deployment group create \
+            --name "$DEPLOYMENT_NAME" \
+            --resource-group "${{ steps.vars.outputs.resource_group }}" \
+            --template-file infra/main.bicep \
+            --parameters "${{ steps.vars.outputs.params_file }}" \
+            --query properties.outputs -o json)
+
+          echo "$OUTPUTS" > deployment-outputs.json
+
+      - name: Upload deployment outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-outputs-${{ steps.vars.outputs.environment }}
+          path: deployment-outputs.json
