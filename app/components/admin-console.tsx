@@ -60,11 +60,11 @@ export function AdminConsole() {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div>
             <p className="eyebrow">operator console</p>
-            <h1 className="font-display text-2xl uppercase text-white sm:text-3xl">
+            <h1 className="font-display text-2xl uppercase sm:text-3xl">
               Admin wipe
             </h1>
           </div>
-          <Link href="/" className="text-sm uppercase tracking-[0.3em] text-[var(--color-copy-soft)] transition hover:text-white">
+          <Link href="/" className="text-sm uppercase tracking-[0.3em] text-[var(--color-copy-soft)] transition hover:text-black">
             return to race
           </Link>
         </div>
@@ -94,7 +94,7 @@ export function AdminConsole() {
           </label>
 
           <div className="panel-subtle">
-            <p className="text-lg text-white">{message}</p>
+            <p className="text-lg">{message}</p>
             <p className="mt-2 text-base text-[var(--color-copy-soft)]">
               This clears the leaderboard and broadcasts a reset event to connected clients.
             </p>
