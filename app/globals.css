@@ -85,8 +85,8 @@ input {
 }
 
 .panel--hard {
-  border-color: rgba(165, 42, 42, 0.2);
-  background-color: rgb(255, 224, 230, 0.72);
+  border-color: rgba(255, 42, 42, 0.1);
+  background-color: rgba(255, 42, 42, 0.05);
 }
 
 .panel-glow {
