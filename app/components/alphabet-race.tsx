@@ -471,7 +471,7 @@ export function AlphabetRace() {
                       event.preventDefault();
                     }}
                     className={`retro-input retro-input--race ${hasMistake ? "retro-input--error" : ""}`}
-                    placeholder={selectedMode === "hard" ? "öäåzyx..." : SWEDISH_ALPHABET.toUpperCase()}
+                    placeholder={selectedMode === "hard" ? "öäåzyx..." : SWEDISH_ALPHABET}
                     disabled={phase === "finished"}
                     autoCapitalize="none"
                     autoCorrect="off"
