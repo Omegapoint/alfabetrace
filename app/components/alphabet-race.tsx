@@ -383,7 +383,7 @@ export function AlphabetRace() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
       <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-        <div className="panel panel-glow relative overflow-hidden p-5 sm:p-6">
+        <div className={`panel panel-glow relative overflow-hidden p-5 sm:p-6 ${selectedMode === "hard" ? "panel--hard" : ""}`}>
           <div className="relative flex flex-col gap-5">
             <div className="max-w-2xl space-y-4">
               <Image
@@ -549,7 +549,7 @@ export function AlphabetRace() {
           </div>
         </div>
 
-        <aside className="panel p-4 sm:p-5">
+        <aside className={`panel p-4 sm:p-5 ${selectedMode === "hard" ? "panel--hard" : ""}`}>
           <div className="flex items-center justify-between gap-4 border-b border-[rgba(28,41,64,0.12)] pb-4">
             <div>
               <p className="eyebrow">topplista</p>

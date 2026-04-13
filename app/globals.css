@@ -74,10 +74,19 @@ input {
   border-radius: 22px;
   border: 1px solid rgba(28, 41, 64, 0.16);
   background: var(--color-panel);
+  background-color: var(--color-panel);
   box-shadow:
     0 14px 30px rgba(19, 35, 58, 0.13),
     inset 0 0 0 1px rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(12px);
+  transition:
+    background-color 280ms ease,
+    border-color 280ms ease;
+}
+
+.panel--hard {
+  border-color: rgba(165, 42, 42, 0.2);
+  background-color: rgb(255, 224, 230, 0.72);
 }
 
 .panel-glow {
