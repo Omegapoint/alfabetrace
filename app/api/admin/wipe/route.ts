@@ -46,10 +46,18 @@ export async function DELETE(request: Request) {
   const { wiped, storageMode } = await wipeHighscores();
   const { leaderboard } = await listHighscores();
 
-  await broadcastLeaderboardEvent({
-    type: "leaderboard.reset",
-    leaderboard,
-  });
+  await Promise.all([
+    broadcastLeaderboardEvent({
+      type: "leaderboard.reset",
+      mode: "normal",
+      leaderboard: [],
+    }),
+    broadcastLeaderboardEvent({
+      type: "leaderboard.reset",
+      mode: "hard",
+      leaderboard: [],
+    }),
+  ]);
 
   return NextResponse.json({
     wiped,

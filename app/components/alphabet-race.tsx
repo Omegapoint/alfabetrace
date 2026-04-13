@@ -6,16 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import {
   APP_NAME,
   LEADERBOARD_LIMIT,
+  REVERSED_SWEDISH_ALPHABET,
   SWEDISH_ALPHABET,
 } from "@/app/lib/constants";
 import type {
   LeaderboardEvent,
   LeaderboardResponse,
+  RaceMode,
   RaceSubmissionResponse,
   RealtimeNegotiationResponse,
 } from "@/app/lib/types";
 import {
   isCorrectPrefix,
+  isValidMode,
   isValidUsername,
   normalizeUsername,
   sanitizeRaceInput,
@@ -76,6 +79,10 @@ function parseRealtimeMessage(data: unknown) {
   }
 }
 
+function getSequenceForMode(mode: RaceMode) {
+  return mode === "hard" ? REVERSED_SWEDISH_ALPHABET : SWEDISH_ALPHABET;
+}
+
 export function AlphabetRace() {
   const [username, setUsername] = useState("");
   const [committedUsername, setCommittedUsername] = useState("");
@@ -85,6 +92,8 @@ export function AlphabetRace() {
   const [phase, setPhase] = useState<RacePhase>("idle");
   const [hasMistake, setHasMistake] = useState(false);
   const [realtimeEnabled, setRealtimeEnabled] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<RaceMode>("normal");
+  const [leaderboardMode, setLeaderboardMode] = useState<RaceMode>("normal");
 
   const startedAtRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -97,7 +106,9 @@ export function AlphabetRace() {
 
     async function loadLeaderboard() {
       try {
-        const response = await fetch("/api/highscores", { cache: "no-store" });
+        const response = await fetch(`/api/highscores?mode=${leaderboardMode}`, {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           throw new Error("Unable to load highscores.");
@@ -123,7 +134,7 @@ export function AlphabetRace() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [leaderboardMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +173,13 @@ export function AlphabetRace() {
           const message = parseRealtimeMessage(event.data);
 
           if (message) {
-            setLeaderboard(message.leaderboard.slice(0, LEADERBOARD_LIMIT));
+            const eventMode = isValidMode((message as { mode?: unknown }).mode)
+              ? (message as { mode: RaceMode }).mode
+              : "normal";
+
+            if (eventMode === leaderboardMode) {
+              setLeaderboard(message.leaderboard.slice(0, LEADERBOARD_LIMIT));
+            }
           }
         };
 
@@ -191,7 +208,7 @@ export function AlphabetRace() {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, []);
+  }, [leaderboardMode]);
 
   useEffect(() => {
     if (phase !== "racing") {
@@ -241,7 +258,7 @@ export function AlphabetRace() {
     });
   }
 
-  async function finishRace(durationMs: number) {
+  async function finishRace(durationMs: number, mode: RaceMode, sequence: string) {
     setPhase("finished");
     setElapsedMs(durationMs);
 
@@ -252,9 +269,10 @@ export function AlphabetRace() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          mode,
           username: committedUsername,
           durationMs,
-          sequence: SWEDISH_ALPHABET,
+          sequence,
         }),
       });
 
@@ -266,7 +284,9 @@ export function AlphabetRace() {
         );
       }
 
-      setLeaderboard(payload.leaderboard.slice(0, LEADERBOARD_LIMIT));
+      if (payload.mode === leaderboardMode) {
+        setLeaderboard(payload.leaderboard.slice(0, LEADERBOARD_LIMIT));
+      }
     } catch {
       // Keep UX uninterrupted even if persistence fails.
     }
@@ -274,6 +294,7 @@ export function AlphabetRace() {
 
   async function handleRaceInput(value: string) {
     const sanitized = sanitizeRaceInput(value);
+    const activeSequence = getSequenceForMode(selectedMode);
 
     if (phase !== "racing") {
       setRaceInput(sanitized);
@@ -284,7 +305,7 @@ export function AlphabetRace() {
       startedAtRef.current = performance.now();
     }
 
-    const correctPrefix = isCorrectPrefix(sanitized);
+    const correctPrefix = isCorrectPrefix(sanitized, activeSequence);
 
     setRaceInput(sanitized);
     setHasMistake(!correctPrefix);
@@ -293,9 +314,9 @@ export function AlphabetRace() {
       return;
     }
 
-    if (sanitized === SWEDISH_ALPHABET && startedAtRef.current !== null) {
+    if (sanitized === activeSequence && startedAtRef.current !== null) {
       const durationMs = performance.now() - startedAtRef.current;
-      await finishRace(durationMs);
+      await finishRace(durationMs, selectedMode, activeSequence);
     }
   }
 
@@ -327,20 +348,37 @@ export function AlphabetRace() {
     });
   }
 
+  function changeMode(mode: RaceMode) {
+    if (phase === "racing") {
+      return;
+    }
+
+    setSelectedMode(mode);
+    setLeaderboardMode(mode);
+
+    if (phase === "finished") {
+      startNewAttempt();
+      return;
+    }
+
+    setRaceInput("");
+    setHasMistake(false);
+  }
+
+  const activeSequence = getSequenceForMode(selectedMode);
+
   const progressCount = (() => {
     let count = 0;
 
     while (
       count < raceInput.length &&
-      SWEDISH_ALPHABET.slice(0, count + 1) === raceInput.slice(0, count + 1)
+      activeSequence.slice(0, count + 1) === raceInput.slice(0, count + 1)
     ) {
       count += 1;
     }
 
     return count;
   })();
-
-  const nextLetter = SWEDISH_ALPHABET[progressCount]?.toUpperCase() ?? "KLAR";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -358,6 +396,28 @@ export function AlphabetRace() {
               />
             </div>
 
+            <div className="panel-subtle">
+              <span className="field-label">spelläge</span>
+              <div className="mode-switch mt-2">
+                <button
+                  type="button"
+                  className={`mode-switch__button ${selectedMode === "normal" ? "mode-switch__button--active" : ""}`}
+                  onClick={() => changeMode("normal")}
+                  disabled={phase === "racing"}
+                >
+                  Normal
+                </button>
+                <button
+                  type="button"
+                  className={`mode-switch__button ${selectedMode === "hard" ? "mode-switch__button--active" : ""}`}
+                  onClick={() => changeMode("hard")}
+                  disabled={phase === "racing"}
+                >
+                  Hard
+                </button>
+              </div>
+            </div>
+
             {phase === "idle" ? (
               <div className="min-h-[220px] rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
                 <p className="field-label">så här kör du</p>
@@ -365,6 +425,7 @@ export function AlphabetRace() {
                   <li>Skriv in alfabetet från A till Ö så snabbt du kan</li>
                   <li>Bokstäverna måste skrivas i rätt ordning</li>
                   <li>Använd samma namn för att slå ditt rekord - din bästa tid visas i Topplistan!</li>
+                  <li>Hard mode kräver alfabetet baklänges utan synliga ledtrådar</li>
                 </ul>
                 <p className="mt-4 text-sm italic leading-5 text-[var(--color-copy-soft)]">
                   OBS! Efter eventet kommer all speldata att raderas från databasen - men du är välkommen att använda ett smeknamn/fiktivt namn när du spelar
@@ -374,34 +435,32 @@ export function AlphabetRace() {
               <div className="min-h-[220px] rounded-[22px] border border-[rgba(28,41,64,0.12)] bg-[rgba(233,241,252,0.62)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]">
                 <div className="mb-3 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-[var(--color-copy-soft)]">
                   <span className={`status-lamp ${phase === "racing" ? "status-lamp--hot" : ""}`} />
-                  <span>{phase === "racing" ? "aktiv" : "klar"}</span>
-                  <span>nästa: {nextLetter}</span>
                 </div>
 
                 <div className="alphabet-strip" aria-hidden="true">
-                  {[...SWEDISH_ALPHABET].map((character, index) => {
+                  {[...activeSequence].map((character, index) => {
                     const isLocked = index < progressCount;
-                    const isCurrent = index === progressCount;
 
                     return (
                       <span
-                        key={character}
+                        key={`${character}-${index}`}
                         className={[
                           "alphabet-strip__character",
                           isLocked ? "alphabet-strip__character--locked" : "",
-                          isCurrent ? "alphabet-strip__character--current" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        {character.toUpperCase()}
+                        {isLocked ? character.toUpperCase() : ""}
                       </span>
                     );
                   })}
                 </div>
 
                 <label className="mt-4 block space-y-2">
-                  <span className="field-label">skriv det svenska alfabetet</span>
+                  <span className="field-label">
+                    skriv det svenska alfabetet{selectedMode === "hard" ? " baklänges" : ""}
+                  </span>
                   <input
                     ref={raceInputRef}
                     value={raceInput}
@@ -412,7 +471,8 @@ export function AlphabetRace() {
                       event.preventDefault();
                     }}
                     className={`retro-input retro-input--race ${hasMistake ? "retro-input--error" : ""}`}
-                    placeholder={SWEDISH_ALPHABET.toUpperCase()}
+                    placeholder={selectedMode === "hard" ? "öäåzyx..." : SWEDISH_ALPHABET.toUpperCase()}
+                    disabled={phase === "finished"}
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete="off"
@@ -496,6 +556,22 @@ export function AlphabetRace() {
               <h2 className="font-display text-lg uppercase text-[var(--color-copy)] sm:text-xl">
                 Bästa tider
               </h2>
+              <div className="mode-switch mode-switch--compact mt-3">
+                <button
+                  type="button"
+                  className={`mode-switch__button ${leaderboardMode === "normal" ? "mode-switch__button--active" : ""}`}
+                  onClick={() => setLeaderboardMode("normal")}
+                >
+                  Normal
+                </button>
+                <button
+                  type="button"
+                  className={`mode-switch__button ${leaderboardMode === "hard" ? "mode-switch__button--active" : ""}`}
+                  onClick={() => setLeaderboardMode("hard")}
+                >
+                  Hard
+                </button>
+              </div>
             </div>
             <span className={`status-lamp ${realtimeEnabled ? "status-lamp--hot" : ""}`} />
           </div>

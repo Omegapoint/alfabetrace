@@ -2,7 +2,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 
 import { LEADERBOARD_LIMIT } from "@/app/lib/constants";
 import { hasCosmosConfig, serverEnv } from "@/app/lib/env";
-import type { HighscoreEntry, StorageMode } from "@/app/lib/types";
+import type { HighscoreEntry, RaceMode, StorageMode } from "@/app/lib/types";
 
 declare global {
   var __alfabetsraceCosmosClient: CosmosClient | undefined;
@@ -60,10 +60,19 @@ function sortLeaderboard(entries: Iterable<HighscoreEntry>) {
   });
 }
 
-export async function listHighscores(limit = LEADERBOARD_LIMIT) {
+function buildEntryId(normalizedUsername: string, mode: RaceMode) {
+  return `${normalizedUsername}:${mode}`;
+}
+
+export async function listHighscores(limit = LEADERBOARD_LIMIT, mode: RaceMode = "normal") {
   if (!hasCosmosConfig()) {
+    const filtered = [...getMemoryStore().values()].filter((entry) => {
+      const entryMode = entry.mode ?? "normal";
+      return entryMode === mode;
+    });
+
     return {
-      leaderboard: sortLeaderboard(getMemoryStore().values()).slice(0, limit),
+      leaderboard: sortLeaderboard(filtered).slice(0, limit),
       storageMode: getStorageMode(),
     };
   }
@@ -75,13 +84,19 @@ export async function listHighscores(limit = LEADERBOARD_LIMIT) {
     })
     .fetchAll();
 
+  const filtered = resources.filter((entry) => {
+    const entryMode = entry.mode ?? "normal";
+    return entryMode === mode;
+  });
+
   return {
-    leaderboard: sortLeaderboard(resources).slice(0, limit),
+    leaderboard: sortLeaderboard(filtered).slice(0, limit),
     storageMode: getStorageMode(),
   };
 }
 
 export async function upsertBestTime(input: {
+  mode: RaceMode;
   username: string;
   normalizedUsername: string;
   durationMs: number;
@@ -90,7 +105,8 @@ export async function upsertBestTime(input: {
 
   if (!hasCosmosConfig()) {
     const store = getMemoryStore();
-    const existing = store.get(input.normalizedUsername);
+    const entryId = buildEntryId(input.normalizedUsername, input.mode);
+    const existing = store.get(entryId);
 
     const nextEntry: HighscoreEntry = existing
       ? {
@@ -106,7 +122,8 @@ export async function upsertBestTime(input: {
           lastCompletedAt: now,
         }
       : {
-          id: input.normalizedUsername,
+          id: entryId,
+          mode: input.mode,
           username: input.username,
           normalizedUsername: input.normalizedUsername,
           bestTimeMs: input.durationMs,
@@ -115,7 +132,7 @@ export async function upsertBestTime(input: {
           lastCompletedAt: now,
         };
 
-    store.set(input.normalizedUsername, nextEntry);
+    store.set(entryId, nextEntry);
 
     return {
       entry: nextEntry,
@@ -126,19 +143,37 @@ export async function upsertBestTime(input: {
 
   const container = await getHighscoresContainer();
   let existing: HighscoreEntry | undefined;
+  let existingDocumentId: string | null = null;
+  const entryId = buildEntryId(input.normalizedUsername, input.mode);
 
   try {
     const { resource } = await container
-      .item(input.normalizedUsername, input.normalizedUsername)
+      .item(entryId, input.normalizedUsername)
       .read<HighscoreEntry>();
     existing = resource;
+    existingDocumentId = resource?.id ?? null;
   } catch {
     existing = undefined;
+  }
+
+  if (!existing && input.mode === "normal") {
+    try {
+      const { resource } = await container
+        .item(input.normalizedUsername, input.normalizedUsername)
+        .read<HighscoreEntry>();
+      existing = resource;
+      existingDocumentId = resource?.id ?? null;
+    } catch {
+      existing = undefined;
+      existingDocumentId = null;
+    }
   }
 
   const nextEntry: HighscoreEntry = existing
     ? {
         ...existing,
+        id: entryId,
+        mode: input.mode,
         username: input.username,
         attempts: existing.attempts + 1,
         updatedAt:
@@ -150,7 +185,8 @@ export async function upsertBestTime(input: {
         lastCompletedAt: now,
       }
     : {
-        id: input.normalizedUsername,
+        id: entryId,
+        mode: input.mode,
         username: input.username,
         normalizedUsername: input.normalizedUsername,
         bestTimeMs: input.durationMs,
@@ -158,6 +194,10 @@ export async function upsertBestTime(input: {
         updatedAt: now,
         lastCompletedAt: now,
       };
+
+  if (existingDocumentId && existingDocumentId !== entryId) {
+    await container.item(existingDocumentId, input.normalizedUsername).delete();
+  }
 
   await container.items.upsert(nextEntry);
 

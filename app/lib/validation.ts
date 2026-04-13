@@ -2,9 +2,11 @@ import {
   MAX_RACE_DURATION_MS,
   MAX_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
+  RACE_MODES,
   SWEDISH_ALPHABET,
   SWEDISH_ALPHABET_CHARACTERS,
 } from "@/app/lib/constants";
+import type { RaceMode } from "@/app/lib/types";
 
 export function normalizeUsername(value: string) {
   return value
@@ -36,8 +38,12 @@ export function sanitizeRaceInput(value: string) {
     .join("");
 }
 
-export function isValidAlphabetSequence(value: string) {
-  return sanitizeRaceInput(value) === SWEDISH_ALPHABET;
+export function isValidAlphabetSequence(value: string, sequence = SWEDISH_ALPHABET) {
+  return sanitizeRaceInput(value) === sequence;
+}
+
+export function isValidMode(value: unknown): value is RaceMode {
+  return typeof value === "string" && RACE_MODES.includes(value as RaceMode);
 }
 
 export function isValidDuration(value: unknown): value is number {
@@ -49,6 +55,6 @@ export function isValidDuration(value: unknown): value is number {
   );
 }
 
-export function isCorrectPrefix(value: string) {
-  return SWEDISH_ALPHABET.startsWith(sanitizeRaceInput(value));
+export function isCorrectPrefix(value: string, sequence = SWEDISH_ALPHABET) {
+  return sequence.startsWith(sanitizeRaceInput(value));
 }
