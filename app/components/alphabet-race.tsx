@@ -349,7 +349,7 @@ export function AlphabetRace() {
   }
 
   function changeMode(mode: RaceMode) {
-    if (phase === "racing") {
+    if (phase === "racing" && startedAtRef.current !== null) {
       return;
     }
 
@@ -403,7 +403,7 @@ export function AlphabetRace() {
                   type="button"
                   className={`mode-switch__button ${selectedMode === "normal" ? "mode-switch__button--active" : ""}`}
                   onClick={() => changeMode("normal")}
-                  disabled={phase === "racing"}
+                  disabled={phase === "racing" && startedAtRef.current !== null}
                 >
                   Normal
                 </button>
@@ -411,7 +411,7 @@ export function AlphabetRace() {
                   type="button"
                   className={`mode-switch__button ${selectedMode === "hard" ? "mode-switch__button--active" : ""}`}
                   onClick={() => changeMode("hard")}
-                  disabled={phase === "racing"}
+                  disabled={phase === "racing" && startedAtRef.current !== null}
                 >
                   Hard
                 </button>
